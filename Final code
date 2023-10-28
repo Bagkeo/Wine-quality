@@ -1,0 +1,343 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns 
+from sklearn.model_selection import train_test_split  
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+data = pd.read_csv('winequality-red.csv')
+data.columns = data.columns.str.replace(' ','_')
+data.info()
+data.isnull().any()
+data.describe()
+
+#Data prepocessing
+#Looking for correlations between feature
+data.corr()
+corr_data = data.corr()
+plt.figure(figsize = (9, 9))
+sns.heatmap(corr_data, cbar = True, square= True, annot=True, fmt= '.2f',  cmap='Blues')
+plt.title('Correlation Heatmap')
+# Number of wines in each quality category
+sns.catplot(x='quality',  data=data, kind='count')
+plt.title('Number of wines in each quality category')
+data.corr()['quality'].sort_values(ascending=False)
+#Based on the heatmap, alcohol has most positive relationshi with quality, volatile acidity has most negative relationship
+#Most positive relationship 
+plt.figure(figsize=(10, 6))
+sns.set(style="whitegrid")
+ax = sns.barplot(x="quality", y="alcohol", data=data)
+plt.title("Most Positive Relationship", fontsize=16)
+ax.set_xlabel("quality", fontsize=12)
+ax.set_ylabel("alcohol", fontsize=12)
+plt.tight_layout()
+plt.show()
+#Most negative relationship
+plt.figure(figsize=(10, 6))
+sns.set(style="whitegrid")
+ax = sns.barplot(x="quality", y="volatile_acidity", data=data)
+plt.title("Most Negative Relationship", fontsize=16)
+ax.set_xlabel("quality", fontsize=12)
+ax.set_ylabel("volatile acidity", fontsize=12)
+plt.tight_layout()
+plt.show()
+# Data visualization (e.g., histograms, scatter plots, etc.) to understand the data
+# For example, you can create histograms for some columns
+data.hist(bins=20, figsize=(12, 8))
+plt.show()
+
+# Split the data into features (X) and target (y)
+X = data.drop('quality', axis=1)
+y = data['quality']
+#Splitting the data
+y = data['quality']
+y.head()
+
+                       #Logictics regression model
+# For this example, let's use 'alcohol' and 'volatile_acidity' as features
+X = data[['alcohol', 'volatile_acidity']]
+y = data['quality']
+
+# Splitting the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Logistic regression model
+model = LogisticRegression()
+# Fit the model to the training data
+model.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred = model.predict(X_test)
+# Evaluate the model
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+# Visualize the decision boundary (for a two-feature model)
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x="alcohol", y="volatile_acidity", hue="quality", data=data)
+ax = plt.gca()
+xlim = ax.get_xlim()
+ylim = ax.get_ylim()
+# Create a grid to evaluate model predictions
+xx, yy = np.meshgrid(np.linspace(xlim[0], xlim[1], 100),
+                     np.linspace(ylim[0], ylim[1], 100))
+Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+# Plot decision boundary
+plt.contourf(xx, yy, Z, cmap=plt.cm.Paired, alpha=0.8)
+plt.title("Logistic Regression Decision Boundary")
+plt.xlabel("alcohol")
+plt.ylabel("volatile_acidity")
+plt.show()
+
+                         #Improve logistics regression model
+from sklearn.model_selection import train_test_split, GridSearchCV
+# Define features and target
+X = data[['alcohol', 'volatile_acidity']]
+y = data['quality']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Feature scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Hyperparameter tuning
+param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100]}
+grid_search = GridSearchCV(LogisticRegression(max_iter=1000), param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+best_model = grid_search.best_estimator_
+
+# Fit the best model to the training data
+best_model.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred = best_model.predict(X_test)
+
+# Evaluate the model
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Visualize the decision boundary (for a two-feature model)
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x="alcohol", y="volatile_acidity", hue="quality", data=data)
+ax = plt.gca()
+xlim = ax.get_xlim()
+ylim = ax.get_ylim()
+
+# Create a grid to evaluate model predictions
+xx, yy = np.meshgrid(np.linspace(xlim[0], xlim[1], 100),
+                     np.linspace(ylim[0], ylim[1], 100))
+Z = best_model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+# Plot decision boundary
+plt.contourf(xx, yy, Z, cmap=plt.cm.Paired, alpha=0.8)
+plt.title("Logistic Regression Decision Boundary (Tuned)")
+plt.xlabel("alcohol")
+plt.ylabel("volatile acidity")
+plt.show()
+
+                            #KNN model
+
+# Split the data into features (X) and target (y)
+X = data.drop('quality', axis=1)
+y = data['quality']
+
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize the features (mean=0, variance=1)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Create and train the KNN classifier
+k = 5  # You can choose the number of neighbors
+knn_classifier = KNeighborsClassifier(n_neighbors=k)
+knn_classifier.fit(X_train, y_train)
+
+# Predict the labels for the test set
+y_pred = knn_classifier.predict(X_test)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy * 100:.2f}%')
+
+# Generate a classification report
+report = classification_report(y_test, y_pred)
+print("Classification Report:\n", report)
+
+# Create a confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("Confusion Matrix:\n", conf_matrix)
+
+# You can also visualize the confusion matrix
+plt.figure(figsize=(8, 6))
+plt.imshow(conf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+plt.title("Confusion Matrix")
+plt.colorbar()
+plt.xticks(np.arange(10), range(1, 11))
+plt.yticks(np.arange(10), range(1, 11))
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+                 #Random forest model with alcohol and volatile acidity 
+                 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.preprocessing import StandardScaler
+# Standardize numerical features
+scaler = StandardScaler()
+numerical_cols = ['alcohol', 'volatile_acidity']
+data[numerical_cols] = scaler.fit_transform(data[numerical_cols])
+
+# Splitting the data
+X = data.drop(columns=['quality'])
+y = data['quality']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Random Forest Classifier
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+
+            #Random forest  use all the features except 'quality' as input to the model
+# Splitting the data
+X = data.drop(columns=['quality'])  # Use all features except 'quality' as input
+y = data['quality']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize numerical features (optional, you can choose to standardize specific features if needed)
+scaler = StandardScaler()
+X_train[numerical_cols] = scaler.fit_transform(X_train[numerical_cols])
+X_test[numerical_cols] = scaler.transform(X_test[numerical_cols])
+
+# Random Forest Classifier (you can experiment with hyperparameters)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+
+
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+# Assuming the data is in a CSV file named 'wine_data.csv'
+data = pd.read_csv('winequality_red.csv')
+
+# Display the first few rows of the dataset
+print(data.head())
+
+# Summary statistics
+print(data.describe())
+
+# Check for missing values
+print(data.isnull().sum())
+
+# Data visualization (e.g., histograms, scatter plots, etc.) to understand the data
+# For example, you can create histograms for some columns
+data.hist(bins=20, figsize=(12, 8))
+plt.show()
+
+# Split the data into features (X) and target (y)
+X = data.drop('quality', axis=1)
+y = data['quality']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize the features (mean=0, variance=1)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Find the best K value using cross-validation
+best_k = None
+best_accuracy = 0
+
+# Try different K values (e.g., from 1 to 20)
+for k in range(1, 21):
+    knn_classifier = KNeighborsClassifier(n_neighbors=k)
+    scores = cross_val_score(knn_classifier, X_train, y_train, cv=5)  # 5-fold cross-validation
+    
+    # Calculate the mean accuracy for the current K value
+    mean_accuracy = np.mean(scores)
+    
+    if mean_accuracy > best_accuracy:
+        best_accuracy = mean_accuracy
+        best_k = k
+
+print(f'Best K: {best_k}')
+print(f'Best Accuracy: {best_accuracy * 100:.2f}%')
+
+# Create and train the KNN classifier with the best K
+knn_classifier = KNeighborsClassifier(n_neighbors=best_k)
+knn_classifier.fit(X_train, y_train)
+
+# Predict the labels for the test set
+y_pred = knn_classifier.predict(X_test)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy * 100:.2f}%')
+
+# Generate a classification report
+report = classification_report(y_test, y_pred)
+print("Classification Report:\n", report)
+
+# Create a confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("Confusion Matrix:\n", conf_matrix)
+
+# You can also visualize the confusion matrix
+plt.figure(figsize=(8, 6))
+plt.imshow(conf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+plt.title("Confusion Matrix")
+plt.colorbar()
+plt.xticks(np.arange(10), range(1, 11))
+plt.yticks(np.arange(10), range(1, 11))
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
